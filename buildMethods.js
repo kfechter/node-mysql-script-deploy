@@ -90,7 +90,7 @@ module.exports = function(options) {
                     'createdAt datetime null,' +
                     'name varchar(100),' +
                     'status varchar(10) null,' +
-                    'primary key(version, status))';
+                    'index (version))';
         db2.query(sql, function(err) {
             if (err) return callback(err);
             console.log('| Table created successfully');

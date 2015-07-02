@@ -1,7 +1,7 @@
 {
   "name": "mysql-script-deploy",
   "version": "0.0.0",
-  "description": "Deploys your schema changes and routines versions and roles back failed procedures",
+  "description": "Deploys your schema changes and routines, it versions all your changes and roles back failed routines to previous versions",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
