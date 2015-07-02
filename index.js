@@ -1,5 +1,4 @@
-
-
+var os = require('os');
 var fs = require('fs');
 var async = require('async');
 var path = require('path');
@@ -12,24 +11,34 @@ module.exports = function(options, done) {
     var solidLine  = '----------------------------------------------------------------------';
     var brokenLine = '- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ';
     var buildMethods = require('./buildMethods')(validatedOptions.options);
+    var initMethods = require('./initMethods')(validatedOptions.options);
     var schemaScriptMethods = require('./schemaScriptMethods')(validatedOptions.options);
-    var storedProcedureMethods = require('./storedProcedureMethods')(validatedOptions.options);
+    var routinesMethods = require('./routinesMethods')(validatedOptions.options);
+
+
+
 
     async.series([
         validateDatabase,
+        attemptLockForUpdate,
         processSchemaChanges,
         processStoredProcs
     ], function(err) {
         if (err) return done(err);
         console.log('                    Database updates complete');
         console.log('                   ---------------------------');
-        done();
+        initMethods.unlockLockTable(function(err) {
+            if (err) return done(err);
+            done();
+        });
     });
 
     function validateDatabase(callback) {
         var actions = [
             buildMethods.checkIfDatabaseExists,
             buildMethods.createDatabase,
+            buildMethods.checkIfLockTableExists,
+            buildMethods.createDatabaseUpdateLockTable,
             buildMethods.checkIfScriptHistoryTableExists,
             buildMethods.createScriptHistory,
             buildMethods.checkIfProcHistoryTableExists,
@@ -48,6 +57,29 @@ module.exports = function(options, done) {
         });
     }
 
+    var lockCode = md5(Date.now().toString() + Math.random().toString());
+
+    function attemptLockForUpdate(callback) {
+        var localIp = getLocalIPAddress();
+        async.waterfall([
+            function(cb) {
+                cb(null, lockCode, localIp);
+            },
+            initMethods.updateLockTableWithLockCode,
+            initMethods.checkLockIsValid
+        ], function(err, lockValid) {
+            if (err) return callback(err);
+            if (!lockValid) {
+                initMethods.waitForUnlock(function(err) {
+                    if (err) return next(err);
+                    done();
+                });
+            } else {
+                callback();
+            }
+        });
+    }
+
     function processSchemaChanges(callback) {
         console.log(solidLine);
         console.log('| Checking for schema change scripts');
@@ -56,7 +88,7 @@ module.exports = function(options, done) {
         schemaScriptMethods.getLastVersionNumber(function(err, lastVersion) {
             if (err) return callback(err);
             try {
-                var scriptFileNames = fs.readdirSync(path.join(__dirname, 'schema'));
+                var scriptFileNames = fs.readdirSync(path.join(__dirname, options.schemaLocation));
             } catch (e) {
                 return callback(new Error('unable_to_read_schema_directory'));
             }
@@ -67,7 +99,7 @@ module.exports = function(options, done) {
                 var scriptVersion = getScriptVersion(scriptFileName);
                 var scriptName = getScriptName(scriptFileName);
                 if (scriptVersion > lastVersion) {
-                    var scriptContent = getFileContent(scriptFileName, 'schema');
+                    var scriptContent = getFileContent(scriptFileName, options.schemaLocation);
                     scriptActions = scriptActions.concat([
                         function(cb) {
                             var values = {scriptVersion: scriptVersion, scriptContent: scriptContent, name: scriptName};
@@ -95,34 +127,35 @@ module.exports = function(options, done) {
         console.log(brokenLine);
 
         try {
-            var procs = fs.readdirSync(path.join(__dirname, 'procedures'));
+            var routines = fs.readdirSync(path.join(__dirname, options.routinesLocation));
         } catch (e) {
             return callback(new Error('unable_to_read_procs_directory'));
         }
 
-        var procActions = [];
+        var routineActions = [];
 
-        procs.forEach(function (filename) {
-            var content = getProcContent(filename);
+        routines.forEach(function (filename) {
+            var content = getFileContent(filename, options.routinesLocation);
             var md5Hash = md5(content);
-            var name = getProcName(content);
-            if (!name) return;
-            procActions = procActions.concat([
+            var routineName = getRoutineName(content);
+            var routineType = getRoutineType(content);
+            if (!routineName) return;
+            routineActions = routineActions.concat([
                 function (cb) {
-                    var values = {md5: md5Hash, name: name, content: content};
+                    var values = {md5: md5Hash, name: routineName, content: content, routineType: routineType};
                     cb(null, values);
                 },
-                storedProcedureMethods.getLatestMd5,
-                storedProcedureMethods.checkUpdateRequired,
-                storedProcedureMethods.getCurrentProcForRollback,
-                storedProcedureMethods.insertAttemptIntoHistoryAsPending,
-                storedProcedureMethods.dropCurrentProc,
-                storedProcedureMethods.createNewProcOrRollback,
-                storedProcedureMethods.recordUpdateHistory
+                routinesMethods.getLatestMd5,
+                routinesMethods.checkUpdateRequired,
+                routinesMethods.getCurrentRoutineForRollback,
+                routinesMethods.insertAttemptIntoHistoryAsPending,
+                routinesMethods.dropCurrentRoutine,
+                routinesMethods.createNewProcOrRollback,
+                routinesMethods.recordUpdateHistory
             ]);
         });
 
-        async.waterfall(procActions, function (err) {
+        async.waterfall(routineActions, function (err) {
             if (err) return callback(err);
             console.log('| Done');
             console.log(solidLine);
@@ -131,23 +164,29 @@ module.exports = function(options, done) {
         });
     }
 
-    function getProcContent(filename) {
-        return fs.readFileSync(path.join(__dirname, 'procedures', filename), {encoding: 'utf8'});
-    }
-
     function getFileContent(filename, folder) {
         return fs.readFileSync(path.join(__dirname, folder, filename), {encoding: 'utf8'});
     }
 
-    function getProcName(content) {
-        var procNameRegex = /create procedure\s?`?'?"?([a-z0-9]*)\(?\)?/i;
-        var match = content.match(procNameRegex);
-        if (match && match.length > 0) return match[1];
+    function getRoutineName(content) {
+        var routineNameRegex = /create (procedure)?(function)?\s?`?'?"?([a-z0-9]*)\(?\)?/i;
+        var match = content.match(routineNameRegex);
+        if (match && match.length > 0) return match[3].toLowerCase();
+        return false;
+    }
+
+    function getRoutineType(content) {
+        var routineTypeRegex = /create\s*([a-z]+)/i;
+        var match = content.match(routineTypeRegex);
+        if (match && match.length > 0) return match[1].toLowerCase();
         return false;
     }
 
     function validateOptions(options) {
         var errors = [];
+
+        if (!options.schemaLocation) options.schemaLocation = 'schema';
+        if (!options.routinesLocation) options.routinesLocation = 'routines';
 
         return {
             options: options,
@@ -174,4 +213,17 @@ module.exports = function(options, done) {
         return name.substring(0, 99);
     }
 
+    function getLocalIPAddress() {
+        var interfaces = os.networkInterfaces();
+        var addresses = [];
+        for (var k in interfaces) {
+            for (var k2 in interfaces[k]) {
+                var address = interfaces[k][k2];
+                if (address.family === 'IPv4' && !address.internal) {
+                    addresses.push(address.address);
+                }
+            }
+        }
+        return addresses[0];
+    }
 };

@@ -17,7 +17,7 @@ module.exports = function(options) {
     });
 
     function getLastVersionNumber(callback) {
-        var sql = 'select version from database_script_history order by version desc limit 1';
+        var sql = 'select version from database_script_history where status="success" order by version desc limit 1';
         db.query(sql, function(err, result) {
             if (err) return callback(err);
             var lastVersion = 0;
@@ -53,7 +53,7 @@ module.exports = function(options) {
 
     // PRIVATE FUNCTIONS
     function updateHistory(status, createdAt, version, callback) {
-        var sql = 'update database_script_history set status=?, createdAt=? where version=?';
+        var sql = 'update database_script_history set status=?, createdAt=? where version=? and status="pending"';
         db.query(sql, [status, createdAt, version], function(err) {
             if (err) return callback(err);
             callback();

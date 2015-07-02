@@ -19,13 +19,12 @@ module.exports = function(options) {
     });
 
     function checkIfDatabaseExists(callback) {
-
         var sql = 'show databases like "' + options.database + '"';
         db1.query(sql, function(err, result) {
             if (err) return callback(err);
             var exists = result.length > 0;
             return callback(null, exists);
-        })
+        });
     }
 
     function createDatabase(exists, callback) {
@@ -38,6 +37,39 @@ module.exports = function(options) {
             console.log('| Database created successfully');
             callback();
         });
+    }
+
+    function checkIfLockTableExists(callback) {
+        var sql = 'show tables like "database_update_lock"';
+        db2.query(sql, function(err, result) {
+            if (err) return callback(err);
+            var exists = result.length > 0;
+            return callback(null, exists);
+        });
+    }
+
+    function createDatabaseUpdateLockTable(exists, callback) {
+        if (exists) return callback();
+        console.log('| Database update lock table missing');
+        console.log('| Creating missing table');
+        var sql = 'create table database_update_lock (' +
+            'id int unsigned primary key not null,' +
+            'lastLockedAt datetime null,' +
+            'lockedWith varchar(36) null,' +
+            'lastLockedByIp varchar(15) null)';
+        db2.query(sql, function(err) {
+            if (err) return callback(err);
+            console.log('| Table created successfully');
+            insertInitialLockRow(function(err) {
+                if (err) return callback(err);
+                callback();
+            });
+        });
+    }
+
+    function insertInitialLockRow(callback) {
+        var sql = 'insert into database_update_lock (id) values (?)';
+        db2.query(sql, [1], callback);
     }
 
     function checkIfScriptHistoryTableExists(callback) {
@@ -54,10 +86,11 @@ module.exports = function(options) {
         console.log('| Database script history table missing');
         console.log('| Creating missing table');
         var sql = 'create table database_script_history (' +
-                    'version int unsigned not null primary key,' +
+                    'version int unsigned not null,' +
                     'createdAt datetime null,' +
                     'name varchar(100),' +
-                    'status varchar(10) null)';
+                    'status varchar(10) null,' +
+                    'primary key(version, status))';
         db2.query(sql, function(err) {
             if (err) return callback(err);
             console.log('| Table created successfully');
@@ -65,8 +98,8 @@ module.exports = function(options) {
         });
     }
 
-    function checkIfProcHistoryTableExists(callback) {
-        var sql = 'show tables like "database_proc_history"';
+    function checkIfRoutineHistoryTableExists(callback) {
+        var sql = 'show tables like "database_routine_history"';
         db2.query(sql, function(err, result) {
             if (err) return callback(err);
             var exists = result.length > 0;
@@ -76,9 +109,9 @@ module.exports = function(options) {
 
     function createProcHistory(exists, callback) {
         if (exists) return callback();
-        console.log('| Database procedure history table missing');
+        console.log('| Database routine history table missing');
         console.log('| Creating missing table');
-        var sql = 'create table database_proc_history (' +
+        var sql = 'create table database_routine_history (' +
                     'id int unsigned auto_increment not null primary key,' +
                     'name varchar(100) not null,' +
                     'md5 varchar(32) not null,' +
@@ -96,9 +129,11 @@ module.exports = function(options) {
     return {
         checkIfDatabaseExists: checkIfDatabaseExists,
         createDatabase: createDatabase,
+        checkIfLockTableExists: checkIfLockTableExists,
+        createDatabaseUpdateLockTable: createDatabaseUpdateLockTable,
         checkIfScriptHistoryTableExists: checkIfScriptHistoryTableExists,
         createScriptHistory: createScriptHistory,
-        checkIfProcHistoryTableExists: checkIfProcHistoryTableExists,
+        checkIfProcHistoryTableExists: checkIfRoutineHistoryTableExists,
         createProcHistory: createProcHistory
     };
 };
