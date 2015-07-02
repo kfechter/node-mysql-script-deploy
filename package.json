@@ -1,0 +1,24 @@
+{
+  "name": "mysql-script-deploy",
+  "version": "0.0.0",
+  "description": "Deploys your schema changes and routines versions and roles back failed procedures",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "MySql",
+    "Deploy",
+    "Database",
+    "rolling",
+    "stored",
+    "procedures"
+  ],
+  "author": "fixiecoder",
+  "license": "MIT",
+  "dependencies": {
+    "md5": "~1.0.0",
+    "async": "~1.3.0",
+    "mysql": "~2.7.0"
+  }
+}
