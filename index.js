@@ -7,7 +7,7 @@ var md5 = require('MD5');
 module.exports = function(options, done) {
     //TODO: validate options before creating database connections
     var validatedOptions = validateOptions(options);
-    if (validatedOptions.errors.length > 0) return done(new Error(validatedOptions.errors.join(' and ')));
+    if (validatedOptions.errors.length > 0) return done(new Error(validatedOptions.errors));
     var solidLine  = '----------------------------------------------------------------------';
     var brokenLine = '- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ';
     var buildMethods = require('./buildMethods')(validatedOptions.options);
@@ -88,7 +88,7 @@ module.exports = function(options, done) {
         schemaScriptMethods.getLastVersionNumber(function(err, lastVersion) {
             if (err) return callback(err);
             try {
-                var scriptFileNames = fs.readdirSync(path.join(__dirname, options.schemaLocation));
+                var scriptFileNames = fs.readdirSync(options.schemaLocation);
             } catch (e) {
                 return callback(new Error('unable_to_read_schema_directory'));
             }
@@ -127,7 +127,7 @@ module.exports = function(options, done) {
         console.log(brokenLine);
 
         try {
-            var routines = fs.readdirSync(path.join(__dirname, options.routinesLocation));
+            var routines = fs.readdirSync(options.routinesLocation);
         } catch (e) {
             return callback(new Error('unable_to_read_procs_directory'));
         }
@@ -165,7 +165,7 @@ module.exports = function(options, done) {
     }
 
     function getFileContent(filename, folder) {
-        return fs.readFileSync(path.join(__dirname, folder, filename), {encoding: 'utf8'});
+        return fs.readFileSync(path.join(folder, filename), {encoding: 'utf8'});
     }
 
     function getRoutineName(content) {
@@ -185,12 +185,16 @@ module.exports = function(options, done) {
     function validateOptions(options) {
         var errors = [];
 
-        if (!options.schemaLocation) options.schemaLocation = 'schema';
-        if (!options.routinesLocation) options.routinesLocation = 'routines';
+        if (!options.host) errors.push('MYSQL_SCRIPT_DEPLOY:no_host_specified_in_options');
+        if (!options.user) errors.push('MYSQL_SCRIPT_DEPLOY:no_user_specified_in_options');
+        if (!options.password) errors.push('MYSQL_SCRIPT_DEPLOY:no_password_specified_in_options');
+        if (!options.database) errors.push('MYSQL_SCRIPT_DEPLOY:no_database_specified_in_options');
+        if (!options.schemaLocation) options.schemaLocation = path.join(__dirname, '/../databaseScripts/schemaScripts');
+        if (!options.routinesLocation) options.routinesLocation = path.join(__dirname, '/../databaseScripts/schemaScripts');
 
         return {
             options: options,
-            errors: errors
+            errors: errors.join('|and|')
         };
     }
 
