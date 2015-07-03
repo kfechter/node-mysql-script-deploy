@@ -169,7 +169,7 @@ module.exports = function(options, done) {
     }
 
     function getRoutineName(content) {
-        var routineNameRegex = /create (procedure)?(function)?\s?`?'?"?([a-z0-9]*)\(?\)?/i;
+        var routineNameRegex = /create (procedure)?(function)?\s?`?'?"?([a-z0-9_]*)\(?\)?/i;
         var match = content.match(routineNameRegex);
         if (match && match.length > 0) return match[3].toLowerCase();
         return false;
