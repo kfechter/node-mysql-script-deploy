@@ -4,6 +4,7 @@ module.exports = function(options) {
 
     var db1 = mysql.createConnection({
         host: options.host,
+		port: options.port,
         user: options.user,
         password: options.password,
         multipleStatements: true
@@ -12,6 +13,7 @@ module.exports = function(options) {
 
     var db2 = mysql.createConnection({
         host: options.host,
+		port: options.port,
         user: options.user,
         password: options.password,
         database: options.database,

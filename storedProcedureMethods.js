@@ -4,6 +4,7 @@ module.exports = function(options) {
 
     var db = mysql.createConnection({
         host: options.host,
+		port: options.port,
         user: options.user,
         password: options.password,
         database: options.database,
