@@ -1,4 +1,4 @@
-# mysql-script-deploy
+# mysql-deploy
 ---
 
 This useful little package takes the pain out of updating keeping your database up to date,
@@ -6,7 +6,7 @@ whether in the development environent or production.
 
 ## Installation
 ```
-sudo npm install mysql-script-deploy --save
+sudo npm install mysql-deploy --save
 ```
 
 
@@ -15,10 +15,11 @@ sudo npm install mysql-script-deploy --save
 Call scriptDeploy method at the end of your main script before your app finishes starting. In an ExpressJS app I place the app.listen() inside the callback function so my server won't start untill all the scripts have deployed.
 
 ```javascript
-var scriptDeploy = require('mysql-script-deploy ');
+var scriptDeploy = require('mysql-deploy ');
 
 var options = {
     host 				: 'example_host',
+	port				: 33306,
     user 				: 'username',
     password 			: 'password',
     database 			: 'example_database',
@@ -74,11 +75,11 @@ END
 
 ## Create database
 
- If the database name in the database options does not exist, mysql-script-deploy will attempt to create it. If it fails for any reason, lack of permissions or incorrect connection details, it will halt and no futher scripts will run.
+ If the database name in the database options does not exist, mysql-deploy will attempt to create it. If it fails for any reason, lack of permissions or incorrect connection details, it will halt and no futher scripts will run.
 
-## mysql-script-deploy management tables
+## mysql-deploy management tables
 
-mysql-script-deploy creates 3 tables the first time you run it in an app. These table will live on the database named in the database option. They are used to track the versions of the schema scripts, functions and stored procedures. It is best to avoid modifying or manually adding any data in these tables.
+mysql-deploy creates 3 tables the first time you run it in an app. These table will live on the database named in the database option. They are used to track the versions of the schema scripts, functions and stored procedures. It is best to avoid modifying or manually adding any data in these tables.
 
 These tables are:
  - database_update_lock
@@ -87,7 +88,7 @@ These tables are:
 
 ## Locking
 
-When running, mysql-script-deploy locks itself to prevent other instances of mysql-script-deploy from running at the same time. This lock only lasts for two minutes so please be patient.
+When running, mysql-deploy locks itself to prevent other instances of mysql-deploy from running at the same time. This lock only lasts for two minutes so please be patient.
 
 
 
