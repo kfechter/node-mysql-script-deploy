@@ -1,6 +1,6 @@
 {
   "name": "mysql-deploy-redux",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Deploys your schema changes and routines, it versions all your changes and roles back failed routines to previous versions",
   "main": "index.js",
   "scripts": {
