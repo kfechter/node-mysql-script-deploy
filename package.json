@@ -1,6 +1,6 @@
 {
   "name": "mysql-deploy-redux",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Deploys your schema changes and routines, it versions all your changes and roles back failed routines to previous versions",
   "main": "index.js",
   "scripts": {
@@ -23,10 +23,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/gaccettola/node-mysql-script-deploy.git"
+    "url": "git+https://github.com/kfechter/node-mysql-script-deploy.git"
   },
   "bugs": {
-    "url": "https://github.com/gaccettola/node-mysql-script-deploy/issues"
+    "url": "https://github.com/kfechter/node-mysql-script-deploy/issues"
   },
-  "homepage": "https://github.com/gaccettola/node-mysql-script-deploy#readme"
+  "homepage": "https://github.com/kfechter/node-mysql-script-deploy#readme"
 }
