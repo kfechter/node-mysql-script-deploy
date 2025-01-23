@@ -6,7 +6,7 @@ whether in the development environent or production.
 
 ## Installation
 ```
-sudo npm install mysql-deploy --save
+sudo npm install mysql-deploy-redux --save
 ```
 
 
